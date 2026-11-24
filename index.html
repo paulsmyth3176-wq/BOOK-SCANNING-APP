@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f3b2d">
+<title>ShelfScan</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#f6f1e7; --paper:#fffdf8; --ink:#1d1a16; --muted:#6b6358; --line:#e2d9c8;
+  --green:#1f3b2d; --green2:#2f5a44; --ok:#1e7a46; --okbg:#e3f3e8;
+  --wish:#9a6700; --wishbg:#fdf1d6; --no:#a12d2d; --nobg:#fbe5e3; --accent:#c8553d;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#14130f; --paper:#1e1c17; --ink:#f1ece2; --muted:#a59d90; --line:#34302a;
+  --green:#18301f; --green2:#2f5a44; --ok:#5fd08f; --okbg:#173225; --wish:#f0b84a; --wishbg:#3a2c0f; --no:#ff8a80; --nobg:#3d1a18;
+}}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+header{background:var(--green);color:#f6f1e7;padding:calc(env(safe-area-inset-top) + 14px) 18px 14px;display:flex;align-items:center;gap:10px}
+header h1{margin:0;font:600 21px/1 Georgia,"Times New Roman",serif;letter-spacing:.2px}
+header .count{margin-left:auto;font-size:14px;opacity:.85}
+main{padding:16px 16px calc(96px + env(safe-area-inset-bottom));max-width:640px;margin:0 auto}
+.view{display:none}.view.on{display:block}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--paper);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(3,1fr);padding-bottom:env(safe-area-inset-bottom);z-index:5}
+nav button{background:none;border:0;color:var(--muted);font:600 13px system-ui;padding:10px 0 12px;display:flex;flex-direction:column;align-items:center;gap:3px}
+nav button svg{width:24px;height:24px}
+nav button.on{color:var(--green2)}
+@media (prefers-color-scheme:dark){nav button.on{color:var(--ok)}}
+button,.btn{font:600 16px system-ui;border-radius:12px;border:1px solid var(--line);background:var(--paper);color:var(--ink);padding:12px 16px;min-height:46px;cursor:pointer}
+.btn-p{background:var(--green2);color:#fff;border-color:transparent}
+.btn-w{background:var(--wish);color:#fff;border-color:transparent}
+.btn-d{color:var(--no)}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1}
+input,select,textarea{font:16px system-ui;width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--paper);color:var(--ink)}
+label{font-size:13px;color:var(--muted);display:block;margin:12px 0 4px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:4px;gap:4px;margin-bottom:12px}
+.seg button{border:0;min-height:40px;padding:8px 4px;font-size:14px;border-radius:10px;background:none;color:var(--muted)}
+.seg button.on{background:var(--green2);color:#fff}
+.hint{font-size:14px;color:var(--muted);margin:4px 2px 12px}
+.cam{position:relative;aspect-ratio:4/3;background:#0d0c0a;border-radius:18px;overflow:hidden;display:grid;place-items:center}
+.cam video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cam .guide{position:absolute;left:12%;right:12%;top:34%;bottom:34%;border:3px solid rgba(255,255,255,.85);border-radius:12px;box-shadow:0 0 0 999px rgba(0,0,0,.28);pointer-events:none;display:none}
+.cam .laser{position:absolute;left:14%;right:14%;top:50%;height:2px;background:var(--accent);box-shadow:0 0 10px var(--accent);display:none}
+.cam.live .guide,.cam.live .laser{display:block}
+.cam .start{position:relative;z-index:2;background:#f6f1e7;color:#1d1a16;border:0}
+.cam.live .start{display:none}
+.cam .stop{position:absolute;top:10px;right:10px;z-index:3;display:none;min-height:36px;padding:6px 12px;font-size:14px;background:rgba(0,0,0,.55);color:#fff;border:0}
+.cam.live .stop{display:block}
+.manual{display:flex;gap:8px;margin-top:12px}.manual input{flex:1}.manual button{flex:none}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:16px;margin-top:14px}
+.verdict{border-radius:14px;padding:14px 16px;font:700 20px/1.2 Georgia,serif;margin:-4px -4px 14px}
+.v-own{background:var(--okbg);color:var(--ok)}.v-wish{background:var(--wishbg);color:var(--wish)}.v-no{background:var(--nobg);color:var(--no)}
+.v-sub{display:block;font:500 14px system-ui;margin-top:4px;opacity:.9}
+.book{display:flex;gap:14px;align-items:flex-start}
+.cover{width:72px;height:108px;flex:none;border-radius:6px;background:var(--line);object-fit:cover;display:grid;place-items:center;color:var(--muted);font:700 22px Georgia,serif;overflow:hidden}
+.cover img{width:100%;height:100%;object-fit:cover}
+.book h3{margin:0 0 4px;font:600 18px/1.25 Georgia,serif}
+.meta{font-size:14px;color:var(--muted)}
+.actions{margin-top:14px}
+.list{list-style:none;margin:0;padding:0}
+.list li{display:flex;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line);align-items:center;cursor:pointer}
+.list .cover{width:44px;height:66px;font-size:16px}
+.list .t{font-weight:600;line-height:1.25}
+.list .a{font-size:14px;color:var(--muted)}
+.tag{display:inline-block;font:600 11px system-ui;padding:2px 7px;border-radius:99px;background:var(--wishbg);color:var(--wish);margin-left:6px;vertical-align:2px}
+.chips{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap;align-items:center}
+.chips button{min-height:36px;padding:6px 14px;font-size:14px;border-radius:99px}
+.chips button.on{background:var(--green2);color:#fff;border-color:transparent}
+.chips select{width:auto;margin-left:auto;padding:8px;font-size:14px}
+.empty{text-align:center;color:var(--muted);padding:40px 16px}
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:10;align-items:flex-end;justify-content:center}
+.sheet-bg.on{display:flex}
+.sheet{background:var(--bg);width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom))}
+.sheet h2{margin:0 0 6px;font:600 20px Georgia,serif}
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:600;opacity:0;transition:.2s;z-index:20;max-width:90vw;text-align:center;pointer-events:none}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.more h2{font:600 18px Georgia,serif;margin:22px 0 6px}
+.more .card{margin-top:8px}
+.stat{display:flex;gap:10px}.stat div{flex:1;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center}
+.stat b{display:block;font:700 26px Georgia,serif}
+.stat span{font-size:13px;color:var(--muted)}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--green2);border-radius:50%;animation:s .8s linear infinite;vertical-align:-3px;margin-right:6px}
+@keyframes s{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}.toast{transition:none}}
+</style>
+</head>
+<body>
+<header>
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f6f1e7" stroke-width="1.8"><rect x="3" y="4" width="4" height="16" rx="1"/><rect x="8" y="4" width="4" height="16" rx="1"/><path d="M14 5.5l3.8-1 3.2 14.5-3.8 1z"/></svg>
+  <h1>ShelfScan</h1>
+  <span class="count" id="hdrCount"></span>
+</header>
+
+<main>
+  <!-- SCAN -->
+  <section class="view on" id="v-scan">
+    <div class="seg" id="modeSeg">
+      <button data-mode="check" class="on">Check</button>
+      <button data-mode="own">Add to library</button>
+      <button data-mode="wish">Add to wishlist</button>
+    </div>
+    <p class="hint" id="modeHint"></p>
+    <div class="cam" id="cam">
+      <video id="video" playsinline muted></video>
+      <div class="guide"></div><div class="laser"></div>
+      <button class="start btn" id="startBtn">Start camera</button>
+      <button class="stop" id="stopBtn">Stop</button>
+    </div>
+    <form class="manual" id="manualForm">
+      <input id="manualIsbn" inputmode="numeric" placeholder="Or type an ISBN" autocomplete="off">
+      <button class="btn-p">Go</button>
+    </form>
+    <div id="result"></div>
+  </section>
+
+  <!-- LIBRARY -->
+  <section class="view" id="v-lib">
+    <input id="search" type="search" placeholder="Search title, author, ISBN, shelf…">
+    <div class="chips" id="filterChips">
+      <button data-f="all" class="on">All</button>
+      <button data-f="own">Owned</button>
+      <button data-f="wish">Wishlist</button>
+      <select id="sort">
+        <option value="added">Newest</option>
+        <option value="title">Title</option>
+        <option value="author">Author</option>
+      </select>
+    </div>
+    <ul class="list" id="list"></ul>
+  </section>
+
+  <!-- MORE -->
+  <section class="view more" id="v-more">
+    <div class="stat">
+      <div><b id="stOwn">0</b><span>Owned</span></div>
+      <div><b id="stWish">0</b><span>Wishlist</span></div>
+      <div><b id="stAuth">0</b><span>Authors</span></div>
+    </div>
+
+    <h2>Add a book by hand</h2>
+    <p class="hint">For books with no barcode (older books, gifts, signed copies).</p>
+    <button class="btn" id="addManualBtn" style="width:100%">Add book without scanning</button>
+
+    <h2>Backup &amp; restore</h2>
+    <p class="hint" id="backupInfo">Your list is stored on this phone only. Save a backup now and then (to Google Drive, email, etc.).</p>
+    <div class="row">
+      <button class="btn-p" id="exportJson">Save backup</button>
+      <button class="btn" id="exportCsv">Export CSV</button>
+    </div>
+    <div class="card">
+      <b>Restore or import</b>
+      <p class="hint" style="margin:6px 0 10px">Accepts a ShelfScan backup, or a CSV export from Goodreads, Libib, Bookshelf, LibraryThing, or a spreadsheet with an ISBN column. Duplicates are skipped.</p>
+      <input type="file" id="importFile" accept=".json,.csv,.txt,application/json,text/csv">
+    </div>
+
+    <h2>Install on your phone</h2>
+    <p class="hint">In Chrome: tap the ⋮ menu → <b>Add to Home screen</b> → <b>Install</b>. In Samsung Internet: ☰ menu → <b>Add page to</b> → <b>Home screen</b>. Once installed it opens like a regular app and works without signal in the store.</p>
+
+    <h2>Danger zone</h2>
+    <button class="btn btn-d" id="wipeBtn" style="width:100%">Delete all books</button>
+    <p class="hint" style="margin-top:18px">Book details from Open Library and Google Books. <span id="ver"></span></p>
+  </section>
+</main>
+
+<nav id="tabs">
+  <button data-v="scan" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M16 8v8"/></svg>Scan</button>
+  <button data-v="lib"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="4" height="16" rx="1"/><rect x="9" y="4" width="4" height="16" rx="1"/><path d="M15 5.5l3.8-1 3 14.5-3.8 1z"/></svg>Library</button>
+  <button data-v="more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>More</button>
+</nav>
+
+<div class="sheet-bg" id="sheetBg"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
